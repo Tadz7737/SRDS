@@ -1,38 +1,38 @@
-CREATE KEYSPACE IF NOT EXISTS Test
+CREATE KEYSPACE IF NOT EXISTS Hotel
   WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 3 };
 
-USE Test;
+USE Hotel;
 
-CREATE TABLE Users (
-  companyName varchar,
+CREATE TABLE Rooms (
+  roomId  varchar,
+  startDate date,
+  endDate date,
   name varchar,
-  phone int,
-  street varchar,
-  pets list<varchar>,
-  PRIMARY KEY (companyName, name)
+  size int,
+  PRIMARY KEY (roomId)
 );
 
-CREATE INDEX streetIndex ON Users (street);
+-- CREATE INDEX roomIndex ON Rooms (roomId);
 
-CREATE TABLE MeteoData (
-  stationName varchar, 
-  measurement timestamp, 
-  temperature double,
-  pressure double,
-  PRIMARY KEY (stationName, measurement)
-);
+-- CREATE TABLE MeteoData (
+--   stationName varchar, 
+--   measurement timestamp, 
+--   temperature double,
+--   pressure double,
+--   PRIMARY KEY (stationName, measurement)
+-- );
 
-CREATE TABLE MeteoData2 (
-  stationName varchar, 
-  mDay varchar,
-  measurement timestamp, 
-  temperature double,
-  pressure double,
-  PRIMARY KEY ((stationName, mDay), measurement)
-);
+-- CREATE TABLE MeteoData2 (
+--   stationName varchar, 
+--   mDay varchar,
+--   measurement timestamp, 
+--   temperature double,
+--   pressure double,
+--   PRIMARY KEY ((stationName, mDay), measurement)
+-- );
 
-CREATE TABLE PageViewCounts (
-  url varchar,
-  views counter,
-  PRIMARY KEY(url)
-);
+-- CREATE TABLE PageViewCounts (
+--   url varchar,
+--   views counter,
+--   PRIMARY KEY(url)
+-- );
