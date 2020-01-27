@@ -10,6 +10,8 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 
+import java.sql.*;
+
 /*
  * For error handling done right see: 
  * https://www.datastax.com/dev/blog/cassandra-error-handling-done-right
@@ -40,20 +42,18 @@ public class BackendSession {
 		prepareStatements();
 	}
 
-	private static PreparedStatement SELECT_ALL_FROM_USERS;
-	private static PreparedStatement INSERT_INTO_USERS;
-	private static PreparedStatement DELETE_ALL_FROM_USERS;
+	private static PreparedStatement SELECT_ALL_FROM_ROOMS;
+	private static PreparedStatement INSERT_INTO_ROOM;
 
-	private static final String USER_FORMAT = "- %-10s  %-16s %-10s %-10s\n";
+	private static final String ROOM_FORMAT = "- %-10s %-10s  %-16s %-10s %-10s\n";
 	// private static final SimpleDateFormat df = new
 	// SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
 	private void prepareStatements() throws BackendException {
 		try {
-			SELECT_ALL_FROM_USERS = session.prepare("SELECT * FROM users;");
-			INSERT_INTO_USERS = session
-					.prepare("INSERT INTO users (companyName, name, phone, street) VALUES (?, ?, ?, ?);");
-			DELETE_ALL_FROM_USERS = session.prepare("TRUNCATE users;");
+			SELECT_ALL_FROM_ROOMS = session.prepare("SELECT * FROM Rooms;");
+			INSERT_INTO_ROOM = session
+					.prepare("INSERT INTO Rooms (startDate, endDate, name) VALUES (?, ?, ?) WHERE roomId=?;");
 		} catch (Exception e) {
 			throw new BackendException("Could not prepare statements. " + e.getMessage() + ".", e);
 		}
@@ -63,7 +63,7 @@ public class BackendSession {
 
 	public String selectAll() throws BackendException {
 		StringBuilder builder = new StringBuilder();
-		BoundStatement bs = new BoundStatement(SELECT_ALL_FROM_USERS);
+		BoundStatement bs = new BoundStatement(SELECT_ALL_FROM_ROOMS);
 
 		ResultSet rs = null;
 
@@ -74,33 +74,34 @@ public class BackendSession {
 		}
 
 		for (Row row : rs) {
-			String rcompanyName = row.getString("companyName");
-			String rname = row.getString("name");
-			int rphone = row.getInt("phone");
-			String rstreet = row.getString("street");
+			int roomId = row.getInt("roomId");
+			Date startDate = Date.valueOf(row.getString("startDate"));
+			Date endDate = Date.valueOf(row.getString("endDate"));
+			String name = row.getString("name");
+			int size = row.getInt("size");
 
-			builder.append(String.format(USER_FORMAT, rcompanyName, rname, rphone, rstreet));
+			builder.append(String.format(ROOM_FORMAT, roomId, startDate, endDate, name, size));
 		}
 
 		return builder.toString();
 	}
 
-	public void upsertUser(String companyName, String name, int phone, String street) throws BackendException {
-		BoundStatement bs = new BoundStatement(INSERT_INTO_USERS);
-		bs.bind(companyName, name, phone, street);
+	public void reserveRoom(int roomId, String startDate, String endDate, int size, String name) throws BackendException {
+		BoundStatement bs = new BoundStatement(INSERT_INTO_ROOM);
+		bs.bind(startDate, endDate, name, roomId);
 
 		try {
 			session.execute(bs);
 		} catch (Exception e) {
-			throw new BackendException("Could not perform an upsert. " + e.getMessage() + ".", e);
+			throw new BackendException("Could not perform a reservation. " + e.getMessage() + ".", e);
 		}
 
-		logger.info("User " + name + " upserted");
+		logger.info("Room " + roomId + " reserved");
 	}
 
-	public void deleteAll() throws BackendException {
-		BoundStatement bs = new BoundStatement(DELETE_ALL_FROM_USERS);
-
+	public void clearRoom(int roomId) throws BackendException {
+		BoundStatement bs = new BoundStatement(INSERT_INTO_ROOM);
+		bs.bind("1900-00-01", "1900-00-01", "", roomId);
 		try {
 			session.execute(bs);
 		} catch (Exception e) {
