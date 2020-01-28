@@ -4,9 +4,9 @@ CREATE KEYSPACE IF NOT EXISTS Hotel
 USE Hotel;
 
 CREATE TABLE Rooms (
-  roomId  varchar,
-  startDate date,
-  endDate date,
+  roomId  int,
+  startDate varchar,
+  endDate varchar,
   name varchar,
   size int,
   PRIMARY KEY (roomId)

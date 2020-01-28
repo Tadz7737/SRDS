@@ -1,7 +1,7 @@
 package cassdemo.backend;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
@@ -10,7 +10,9 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 
-import java.sql.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 /*
  * For error handling done right see: 
@@ -43,17 +45,13 @@ public class BackendSession {
 	}
 
 	private static PreparedStatement SELECT_ALL_FROM_ROOMS;
-	private static PreparedStatement INSERT_INTO_ROOM;
-
-	private static final String ROOM_FORMAT = "- %-10s %-10s  %-16s %-10s %-10s\n";
-	// private static final SimpleDateFormat df = new
-	// SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	private static PreparedStatement UPDATE_ROOM;
 
 	private void prepareStatements() throws BackendException {
 		try {
 			SELECT_ALL_FROM_ROOMS = session.prepare("SELECT * FROM Rooms;");
-			INSERT_INTO_ROOM = session
-					.prepare("INSERT INTO Rooms (startDate, endDate, name) VALUES (?, ?, ?) WHERE roomId=?;");
+			UPDATE_ROOM = session
+					.prepare("UPDATE Rooms SET startDate=?, endDate=?, name=? WHERE roomId=?;");
 		} catch (Exception e) {
 			throw new BackendException("Could not prepare statements. " + e.getMessage() + ".", e);
 		}
@@ -61,12 +59,11 @@ public class BackendSession {
 		logger.info("Statements prepared");
 	}
 
-	public String selectAll() throws BackendException {
-		StringBuilder builder = new StringBuilder();
+	public Set<Room> selectAll() throws BackendException {
 		BoundStatement bs = new BoundStatement(SELECT_ALL_FROM_ROOMS);
 
 		ResultSet rs = null;
-
+		Set<Room> roomInfo = new HashSet<Room>();
 		try {
 			rs = session.execute(bs);
 		} catch (Exception e) {
@@ -75,32 +72,54 @@ public class BackendSession {
 
 		for (Row row : rs) {
 			int roomId = row.getInt("roomId");
-			Date startDate = Date.valueOf(row.getString("startDate"));
-			Date endDate = Date.valueOf(row.getString("endDate"));
+			String startDate = row.getString("startDate");
+			String endDate = row.getString("endDate");
 			String name = row.getString("name");
 			int size = row.getInt("size");
 
-			builder.append(String.format(ROOM_FORMAT, roomId, startDate, endDate, name, size));
+			Room room = new Room(roomId, startDate, endDate, name, size);
+			System.out.println(room.name);
+			roomInfo.add(room);
 		}
-
-		return builder.toString();
+		return roomInfo;
 	}
 
-	public void reserveRoom(int roomId, String startDate, String endDate, int size, String name) throws BackendException {
-		BoundStatement bs = new BoundStatement(INSERT_INTO_ROOM);
-		bs.bind(startDate, endDate, name, roomId);
+	public void reserveRoom(String startDate, String endDate, int size, String name) throws BackendException {
+		
+		int totalSize = 0;
+		Set<Room> roomInfo = selectAll();
+		Set<Room> freeRooms = new HashSet<Room>();
+		Set<Integer> reservedRooms = new HashSet<Integer>(); 
 
-		try {
-			session.execute(bs);
-		} catch (Exception e) {
-			throw new BackendException("Could not perform a reservation. " + e.getMessage() + ".", e);
+		for (Room room: roomInfo) {
+			if (room.name == null) {
+				freeRooms.add(room);
+				System.out.println("Room " + room.roomId + " is free");
+			}
 		}
 
-		logger.info("Room " + roomId + " reserved");
+		for (Room room: freeRooms) {
+			if (totalSize <= size) {
+				totalSize += room.size;
+				reservedRooms.add(room.roomId);
+				System.out.println("Room " + room.roomId + " reserved");
+			}
+		}
+
+		for (int roomId: reservedRooms) {
+			BoundStatement bs = new BoundStatement(UPDATE_ROOM);
+			bs.bind(startDate, endDate, name, roomId);
+			try {
+				session.execute(bs);
+				logger.info("Room " + roomId + " reserved");
+			} catch (Exception e) {
+				throw new BackendException("Could not perform a reservation. " + e.getMessage() + ".", e);
+			}
+		}
 	}
 
 	public void clearRoom(int roomId) throws BackendException {
-		BoundStatement bs = new BoundStatement(INSERT_INTO_ROOM);
+		BoundStatement bs = new BoundStatement(UPDATE_ROOM);
 		bs.bind("1900-00-01", "1900-00-01", "", roomId);
 		try {
 			session.execute(bs);

@@ -1,6 +1,6 @@
 package cassdemo;
 
-import java.io.IOException;
+import java.io.*;
 import java.util.Properties;
 
 import cassdemo.backend.BackendException;
