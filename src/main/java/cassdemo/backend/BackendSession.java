@@ -1,6 +1,7 @@
 package cassdemo.backend;
 
 import java.util.HashSet;
+import java.util.IllegalFormatException;
 import java.util.Set;
 
 import com.datastax.driver.core.BoundStatement;
@@ -84,15 +85,34 @@ public class BackendSession {
 		return roomInfo;
 	}
 
+	public boolean isDateBigger(String first, String second) throws IllegalArgumentException{
+		String[] splitFirst = first.split("-");
+		String[] splitSecond = second.split("-");
+
+		if (splitFirst.length < 3 || splitSecond.length < 3) 
+			throw new IllegalArgumentException();
+		//Really bad if
+		try {
+			if (Integer.parseInt(splitFirst[0]) >= Integer.parseInt(splitSecond[0]) &&
+			Integer.parseInt(splitFirst[1]) >= Integer.parseInt(splitSecond[1]) &&
+			Integer.parseInt(splitFirst[2]) > Integer.parseInt(splitSecond[2]))
+				return true;
+		} catch (NumberFormatException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+
 	public void reserveRoom(String startDate, String endDate, int size, String name) throws BackendException {
 		
 		int totalSize = 0;
 		Set<Room> roomInfo = selectAll();
 		Set<Room> freeRooms = new HashSet<Room>();
 		Set<Integer> reservedRooms = new HashSet<Integer>(); 
-
+		
+		//TO-DO: figure out how to reserve a room that is currently occupied
 		for (Room room: roomInfo) {
-			if (room.name == null) {
+			if (room.name == null || (isDateBigger(startDate, room.endDate))) {
 				freeRooms.add(room);
 				System.out.println("Room " + room.roomId + " is free");
 			}
