@@ -11,6 +11,7 @@ USE Hotel;
 -- );
 
 INSERT INTO Rooms (roomId, startDate, endDate, name, size) VALUES (1, '1900-01-01', '1900-01-01', '', 1);
+INSERT INTO Rooms (roomId, startDate, endDate, name, size) VALUES (1, '1900-01-02', '1900-01-03', '', 1);
 INSERT INTO Rooms (roomId, startDate, endDate, name, size) VALUES (2, '1900-01-01', '1900-01-01', '', 1);
 INSERT INTO Rooms (roomId, startDate, endDate, name, size) VALUES (3, '1900-01-01', '1900-01-01', '', 1);
 INSERT INTO Rooms (roomId, startDate, endDate, name, size) VALUES (4, '1900-01-01', '1900-01-01', '', 1);

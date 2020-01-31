@@ -9,7 +9,7 @@ CREATE TABLE Rooms (
   endDate varchar,
   name varchar,
   size int,
-  PRIMARY KEY (roomId)
+  PRIMARY KEY (roomId, startDate)
 );
 
 -- CREATE INDEX roomIndex ON Rooms (roomId);
