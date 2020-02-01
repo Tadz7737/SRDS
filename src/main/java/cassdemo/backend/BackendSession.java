@@ -2,7 +2,9 @@ package cassdemo.backend;
 
 import java.util.HashSet;
 import java.util.IllegalFormatException;
+import java.util.Map;
 import java.util.Set;
+import java.util.HashMap;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
@@ -11,6 +13,7 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 
+import org.apache.commons.math3.util.MultidimensionalCounter.Iterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +55,8 @@ public class BackendSession {
 		try {
 			SELECT_ALL_FROM_ROOMS = session.prepare("SELECT * FROM Rooms;");
 			UPDATE_ROOM = session
-					.prepare("UPDATE Rooms SET startDate=?, endDate=?, name=? WHERE roomId=?;");
+					//.prepare("UPDATE Rooms SET startDate=?, endDate=?, name=? WHERE roomId=?;");
+					.prepare("INSERT INTO Rooms (roomId, startDate, endDate, name, size) VALUES (?, ?, ?, ?, ?)");
 		} catch (Exception e) {
 			throw new BackendException("Could not prepare statements. " + e.getMessage() + ".", e);
 		}
@@ -79,7 +83,6 @@ public class BackendSession {
 			int size = row.getInt("size");
 
 			Room room = new Room(roomId, startDate, endDate, name, size);
-			System.out.println(room.name);
 			roomInfo.add(room);
 		}
 		return roomInfo;
@@ -108,7 +111,7 @@ public class BackendSession {
 		int totalSize = 0;
 		Set<Room> roomInfo = selectAll();
 		Set<Room> freeRooms = new HashSet<Room>();
-		Set<Integer> reservedRooms = new HashSet<Integer>(); 
+		HashMap<Integer, Integer> reservedRooms = new HashMap<Integer, Integer>(); 
 		
 		//TO-DO: figure out how to reserve a room that is currently occupied
 		for (Room room: roomInfo) {
@@ -121,17 +124,17 @@ public class BackendSession {
 		for (Room room: freeRooms) {
 			if (totalSize <= size) {
 				totalSize += room.size;
-				reservedRooms.add(room.roomId);
+				reservedRooms.put(room.roomId, room.size);
 				System.out.println("Room " + room.roomId + " reserved");
 			}
 		}
 
-		for (int roomId: reservedRooms) {
+		for (Map.Entry<Integer, Integer> room: reservedRooms.entrySet()) {
 			BoundStatement bs = new BoundStatement(UPDATE_ROOM);
-			bs.bind(startDate, endDate, name, roomId);
+			bs.bind(room.getKey(), startDate, endDate, name, room.getValue());
 			try {
 				session.execute(bs);
-				logger.info("Room " + roomId + " reserved");
+				logger.info("Room " + room.getKey() + " reserved");
 			} catch (Exception e) {
 				throw new BackendException("Could not perform a reservation. " + e.getMessage() + ".", e);
 			}
