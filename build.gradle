@@ -37,6 +37,9 @@ dependencies {
 
   compile 'com.datastax.cassandra:cassandra-driver-core:3.3.0'
   compile 'org.apache.cassandra:cassandra-all:3.11.0'
+
+  implementation 'com.github.javafaker:javafaker:1.0.1'
+  
 }
 
 configurations.all {
