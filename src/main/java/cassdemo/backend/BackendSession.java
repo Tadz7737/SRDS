@@ -1,7 +1,6 @@
 package cassdemo.backend;
 
 import java.util.HashSet;
-import java.util.IllegalFormatException;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
@@ -14,7 +13,6 @@ import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 
-import org.apache.commons.math3.util.MultidimensionalCounter.Iterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,10 +54,8 @@ public class BackendSession {
 	private void prepareStatements() throws BackendException {
 		try {
 			SELECT_ALL_FROM_ROOMS = session.prepare("SELECT * FROM Rooms;");
-			//TODO FIX SELECT LOGIC
 			SELECT_GREATER_THAN_END_DATE = session.prepare("SELECT * FROM Rooms where endDate < ? ALLOW FILTERING");
 			UPDATE_ROOM = session
-					//.prepare("UPDATE Rooms SET startDate=?, endDate=?, name=? WHERE roomId=?;");
 					.prepare("INSERT INTO Rooms (roomId, startDate, endDate, name, size) VALUES (?, ?, ?, ?, ?)");
 		} catch (Exception e) {
 			throw new BackendException("Could not prepare statements. " + e.getMessage() + ".", e);
@@ -136,23 +132,6 @@ public class BackendSession {
 		return roomInfo;
 	}
 
-	public boolean isDateBigger(String first, String second) throws IllegalArgumentException{
-		String[] splitFirst = first.split("-");
-		String[] splitSecond = second.split("-");
-
-		if (splitFirst.length < 3 || splitSecond.length < 3) 
-			throw new IllegalArgumentException();
-		//Really bad if
-		try {
-			if (Integer.parseInt(splitFirst[0]) >= Integer.parseInt(splitSecond[0]) &&
-			Integer.parseInt(splitFirst[1]) >= Integer.parseInt(splitSecond[1]) &&
-			Integer.parseInt(splitFirst[2]) > Integer.parseInt(splitSecond[2]))
-				return true;
-		} catch (NumberFormatException e) {
-			e.printStackTrace();
-		}
-		return false;
-	}
 
 	public void reserveRoom(LocalDate startDate, LocalDate endDate, int size, String name) throws BackendException {
 		
