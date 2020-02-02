@@ -1,13 +1,15 @@
 package cassdemo.backend;
 
+import com.datastax.driver.core.LocalDate;
+
 public class Room {
     int roomId;
-	String startDate;
-	String endDate;
+	LocalDate startDate;
+	LocalDate endDate;
 	String name;
     int size;
     
-    public Room(int _roomId, String _startDate, String _endDate, String _name, int _size) {
+    public Room(int _roomId, LocalDate _startDate, LocalDate _endDate, String _name, int _size) {
         roomId = _roomId;
         startDate = _startDate;
         endDate = _endDate;

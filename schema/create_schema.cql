@@ -5,8 +5,8 @@ USE Hotel;
 
 CREATE TABLE Rooms (
   roomId  int,
-  startDate varchar,
-  endDate varchar,
+  startDate date,
+  endDate date,
   name varchar,
   size int,
   PRIMARY KEY (roomId, startDate)

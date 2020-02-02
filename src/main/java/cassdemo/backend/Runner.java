@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Properties;
 import java.util.Random;
 
+import com.datastax.driver.core.LocalDate;
 import com.github.javafaker.Faker;
 
 import java.util.Calendar;
@@ -11,8 +12,10 @@ import java.util.GregorianCalendar;
 
 public class Runner extends Thread {
 
-    String randomStartDate;
-    String randomEndDate;
+    String randomStartDateString;
+    String randomEndDateString;
+    LocalDate randomStartDate;
+    LocalDate randomEndDate;
     String randomName;
     int randomSize;
 
@@ -39,17 +42,17 @@ public class Runner extends Thread {
 
         int endDay = randBetween(gc_start.get(Calendar.DAY_OF_YEAR), (gc_start.get(Calendar.DAY_OF_YEAR) + MAX_RESERVATION_DAYS));
         gc_end.set(Calendar.DAY_OF_YEAR, endDay);
-
-        randomStartDate = gc_start.get(Calendar.YEAR) + "-" + (gc_start.get(Calendar.MONTH) + 1) + "-" + gc_start.get(Calendar.DAY_OF_MONTH);
-        randomEndDate = gc_end.get(Calendar.YEAR) + "-" + (gc_end.get(Calendar.MONTH) + 1) + "-"+ gc_end.get(Calendar.DAY_OF_MONTH);
-
+        
+        randomStartDate = LocalDate.fromYearMonthDay(gc_start.get(Calendar.YEAR), gc_start.get(Calendar.MONTH)+1, gc_start.get(Calendar.DAY_OF_MONTH));
+        randomEndDate = LocalDate.fromYearMonthDay(gc_end.get(Calendar.YEAR), gc_end.get(Calendar.MONTH)+1, gc_end.get(Calendar.DAY_OF_MONTH));
+        
         Random rnd = new Random(System.currentTimeMillis());
         randomSize = rnd.nextInt(MAX_ROOM_SIZE) + 1;
 
         Faker faker = new Faker();
         randomName = faker.name().fullName();
 
-        //System.out.println("Attemt to reserve: " + randomStartDate + ", " + randomEndDate + ", " + randomSize + ", " +randomName);
+        //System.out.println("Attemt to reserve: " + randomStartDate.toString() + ", " + randomEndDate.toString() + ", " + randomSize + ", " +randomName);
     }
 
     

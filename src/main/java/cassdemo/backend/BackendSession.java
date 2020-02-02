@@ -8,6 +8,7 @@ import java.util.HashMap;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.LocalDate;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
@@ -49,11 +50,14 @@ public class BackendSession {
 	}
 
 	private static PreparedStatement SELECT_ALL_FROM_ROOMS;
+	private static PreparedStatement SELECT_GREATER_THAN_END_DATE;
 	private static PreparedStatement UPDATE_ROOM;
 
 	private void prepareStatements() throws BackendException {
 		try {
 			SELECT_ALL_FROM_ROOMS = session.prepare("SELECT * FROM Rooms;");
+			//TODO FIX SELECT LOGIC
+			SELECT_GREATER_THAN_END_DATE = session.prepare("SELECT * FROM Rooms where endDate < ? ALLOW FILTERING");
 			UPDATE_ROOM = session
 					//.prepare("UPDATE Rooms SET startDate=?, endDate=?, name=? WHERE roomId=?;");
 					.prepare("INSERT INTO Rooms (roomId, startDate, endDate, name, size) VALUES (?, ?, ?, ?, ?)");
@@ -77,8 +81,32 @@ public class BackendSession {
 
 		for (Row row : rs) {
 			int roomId = row.getInt("roomId");
-			String startDate = row.getString("startDate");
-			String endDate = row.getString("endDate");
+			LocalDate startDate = row.getDate("startDate");
+			LocalDate endDate = row.getDate("endDate");
+			String name = row.getString("name");
+			int size = row.getInt("size");
+
+			Room room = new Room(roomId, startDate, endDate, name, size);
+			roomInfo.add(room);
+		}
+		return roomInfo;
+	}
+
+	public Set<Room> selectGreaterThanEndDate() throws BackendException {
+		BoundStatement bs = new BoundStatement(SELECT_GREATER_THAN_END_DATE);
+
+		ResultSet rs = null;
+		Set<Room> roomInfo = new HashSet<Room>();
+		try {
+			rs = session.execute(bs);
+		} catch (Exception e) {
+			throw new BackendException("Could not perform a query. " + e.getMessage() + ".", e);
+		}
+
+		for (Row row : rs) {
+			int roomId = row.getInt("roomId");
+			LocalDate startDate = row.getDate("startDate");
+			LocalDate endDate = row.getDate("endDate");
 			String name = row.getString("name");
 			int size = row.getInt("size");
 
@@ -106,7 +134,7 @@ public class BackendSession {
 		return false;
 	}
 
-	public void reserveRoom(String startDate, String endDate, int size, String name) throws BackendException {
+	public void reserveRoom(LocalDate startDate, LocalDate endDate, int size, String name) throws BackendException {
 		
 		int totalSize = 0;
 		Set<Room> roomInfo = selectAll();
@@ -115,7 +143,7 @@ public class BackendSession {
 		
 		//TO-DO: figure out how to reserve a room that is currently occupied
 		for (Room room: roomInfo) {
-			if (room.name == null || (isDateBigger(startDate, room.endDate))) {
+			if (room.name == null || (isDateBigger(startDate.toString(), room.endDate.toString()))) {
 				freeRooms.add(room);
 				System.out.println("Room " + room.roomId + " is free");
 			}
