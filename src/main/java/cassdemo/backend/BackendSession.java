@@ -163,9 +163,8 @@ public class BackendSession {
 		
 		//TO-DO: figure out how to reserve a room that is currently occupied
 		for (Room room: roomInfo) {
-			if (room.name == null || room.isRoomFreeAtDate(endDate)) {
+			if (room.isRoomFreeAtDate(endDate)) {
 				freeRooms.add(room);
-				System.out.println("Room " + room.roomId + " is free");
 			}
 		}
 
