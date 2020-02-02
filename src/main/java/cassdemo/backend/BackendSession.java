@@ -73,6 +73,7 @@ public class BackendSession {
 
 		ResultSet rs = null;
 		Set<Room> roomInfo = new HashSet<Room>();
+		HashMap<Integer, Room> rooms = new HashMap<>();
 		try {
 			rs = session.execute(bs);
 		} catch (Exception e) {
@@ -86,17 +87,28 @@ public class BackendSession {
 			String name = row.getString("name");
 			int size = row.getInt("size");
 
-			Room room = new Room(roomId, startDate, endDate, name, size);
+			if (!rooms.keySet().contains(roomId)) {
+				rooms.put(roomId,  new Room(roomId, size));
+			}
+
+			Reservation reservation = new Reservation(startDate, endDate, name);
+			rooms.get(roomId).reservations.add(reservation);
+		}
+
+		for (Room room: rooms.values()) {
 			roomInfo.add(room);
 		}
 		return roomInfo;
 	}
 
-	public Set<Room> selectGreaterThanEndDate() throws BackendException {
+	public Set<Room> selectGreaterThanEndDate(LocalDate finalDate) throws BackendException {
 		BoundStatement bs = new BoundStatement(SELECT_GREATER_THAN_END_DATE);
+		bs.bind(finalDate);
 
 		ResultSet rs = null;
 		Set<Room> roomInfo = new HashSet<Room>();
+		HashMap<Integer, Room> rooms = new HashMap<Integer, Room>();
+
 		try {
 			rs = session.execute(bs);
 		} catch (Exception e) {
@@ -110,7 +122,15 @@ public class BackendSession {
 			String name = row.getString("name");
 			int size = row.getInt("size");
 
-			Room room = new Room(roomId, startDate, endDate, name, size);
+			if (!rooms.keySet().contains(roomId)) {
+				rooms.put(roomId,  new Room(roomId, size));
+			}
+
+			Reservation reservation = new Reservation(startDate, endDate, name);
+			rooms.get(roomId).reservations.add(reservation);
+		}
+
+		for (Room room: rooms.values()) {
 			roomInfo.add(room);
 		}
 		return roomInfo;
@@ -137,13 +157,13 @@ public class BackendSession {
 	public void reserveRoom(LocalDate startDate, LocalDate endDate, int size, String name) throws BackendException {
 		
 		int totalSize = 0;
-		Set<Room> roomInfo = selectAll();
+		Set<Room> roomInfo = selectGreaterThanEndDate(endDate);
 		Set<Room> freeRooms = new HashSet<Room>();
 		HashMap<Integer, Integer> reservedRooms = new HashMap<Integer, Integer>(); 
 		
 		//TO-DO: figure out how to reserve a room that is currently occupied
 		for (Room room: roomInfo) {
-			if (room.name == null || (isDateBigger(startDate.toString(), room.endDate.toString()))) {
+			if (room.name == null || room.isRoomFreeAtDate(endDate)) {
 				freeRooms.add(room);
 				System.out.println("Room " + room.roomId + " is free");
 			}

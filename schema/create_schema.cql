@@ -11,28 +11,3 @@ CREATE TABLE Rooms (
   size int,
   PRIMARY KEY (roomId, startDate)
 );
-
--- CREATE INDEX roomIndex ON Rooms (roomId);
-
--- CREATE TABLE MeteoData (
---   stationName varchar, 
---   measurement timestamp, 
---   temperature double,
---   pressure double,
---   PRIMARY KEY (stationName, measurement)
--- );
-
--- CREATE TABLE MeteoData2 (
---   stationName varchar, 
---   mDay varchar,
---   measurement timestamp, 
---   temperature double,
---   pressure double,
---   PRIMARY KEY ((stationName, mDay), measurement)
--- );
-
--- CREATE TABLE PageViewCounts (
---   url varchar,
---   views counter,
---   PRIMARY KEY(url)
--- );
