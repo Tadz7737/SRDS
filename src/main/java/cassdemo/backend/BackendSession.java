@@ -168,6 +168,9 @@ public class BackendSession {
 			}
 		}
 
+		if (freeRooms.size() == 0) 
+			throw new BackendException("No free rooms");
+
 		for (Room room: freeRooms) {
 			if (totalSize <= size) {
 				totalSize += room.size;

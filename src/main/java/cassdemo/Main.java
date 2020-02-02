@@ -10,7 +10,7 @@ public class Main {
 
 	public static void main(String[] args) throws IOException, BackendException {
 
-		for (int i = 0; i < 10; i++) {
+		for (int i = 0; i < 100; i++) {
 			Runner runner = new Runner();
 			runner.run();
 		}
