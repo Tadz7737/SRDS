@@ -3,6 +3,7 @@ package cassdemo.backend;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.HashMap;
 
 import com.datastax.driver.core.BoundStatement;
@@ -29,6 +30,19 @@ import org.slf4j.LoggerFactory;
  */
 
 public class BackendSession {
+
+	static int counter = 0;
+	static ReentrantLock counterLock = new ReentrantLock(true);
+
+	static void incrementCounter() {
+		counterLock.lock();
+		try {
+			counter++;
+			System.out.println("Counter [" + counter + "]");
+		} finally {
+			counterLock.unlock();
+		}
+	}
 
 	private static final Logger logger = LoggerFactory.getLogger(BackendSession.class);
 
@@ -147,8 +161,10 @@ public class BackendSession {
 			}
 		}
 
-		if (freeRooms.size() == 0) 
+		if (freeRooms.size() == 0) {
+			incrementCounter();
 			throw new BackendException("No free rooms");
+		}
 
 		for (Room room: freeRooms) {
 			if (totalSize <= size) {
