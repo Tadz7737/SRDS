@@ -1,14 +1,14 @@
 package cassdemo.backend;
 
 import java.io.IOException;
+import java.time.temporal.ChronoUnit;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.Properties;
 import java.util.Random;
 
 import com.datastax.driver.core.LocalDate;
 import com.github.javafaker.Faker;
-
-import java.util.Calendar;
-import java.util.GregorianCalendar;
 
 public class Runner extends Thread {
 
@@ -69,10 +69,19 @@ public class Runner extends Thread {
 		} catch (IOException ex) {
 			ex.printStackTrace();
 		}
-		
+        
+        java.time.LocalDate sDate = java.time.LocalDate.of(randomStartDate.getYear(), randomStartDate.getMonth(), randomStartDate.getDay());
+        java.time.LocalDate eDate = java.time.LocalDate.of(randomEndDate.getYear(), randomEndDate.getMonth(), randomEndDate.getDay());
+        java.time.LocalDate rDay = sDate;
+
 		try {
-            BackendSession session = new BackendSession(contactPoint, keyspace);
-            session.reserveRoom(randomStartDate, randomSize, randomName);
+            for(long daysBetween = ChronoUnit.DAYS.between(sDate, eDate); daysBetween >= 0; daysBetween--)
+            {
+                BackendSession session = new BackendSession(contactPoint, keyspace);
+                LocalDate tempDate = LocalDate.fromYearMonthDay(rDay.getYear(), rDay.getMonthValue(), rDay.getDayOfMonth());
+                session.reserveRoom(tempDate, randomSize, randomName);
+                rDay.plusDays(1);
+            }
         } catch(BackendException e) {
             e.printStackTrace();
         }

@@ -62,13 +62,17 @@ public class BackendSession {
 	}
 
 	private static PreparedStatement SELECT_ALL_FROM_ROOMS;
-	private static PreparedStatement SELECT_GREATER_THAN_RDATE;
+	private static PreparedStatement SELECT_RDATE;
 	private static PreparedStatement UPDATE_ROOM;
+	private static PreparedStatement SELECT_EXACT_NAME;
+	private static PreparedStatement CLEAR_ROOM;
 
 	private void prepareStatements() throws BackendException {
 		try {
 			SELECT_ALL_FROM_ROOMS = session.prepare("SELECT * FROM Rooms;");
-			SELECT_GREATER_THAN_RDATE = session.prepare("SELECT * FROM Rooms where rDate = ?");
+			SELECT_RDATE = session.prepare("SELECT * FROM Rooms where rDate = ?");
+			SELECT_EXACT_NAME = session.prepare("SELECT * FROM Rooms WHERE rDate = ? and name = ?");
+			CLEAR_ROOM = session.prepare("UPDATE Rooms SET rDate = ? name = ? WHERE rDate = ? name = ?");
 			UPDATE_ROOM = session
 					.prepare("INSERT INTO Rooms (roomId, rDate, name, size) VALUES (?, ?, ?, ?)");
 		} catch (Exception e) {
@@ -101,7 +105,7 @@ public class BackendSession {
 			}
 
 			Reservation reservation = new Reservation(rDate, name);
-			rooms.get(roomId).reservations.add(reservation);
+			rooms.get(roomId).reservation = reservation;
 		}
 
 		for (Room room: rooms.values()) {
@@ -110,8 +114,8 @@ public class BackendSession {
 		return roomInfo;
 	}
 
-	public Set<Room> selectGreaterTh(LocalDate finalDate) throws BackendException {
-		BoundStatement bs = new BoundStatement(SELECT_GREATER_THAN_RDATE);
+	public Set<Room> selectRdate(LocalDate finalDate) throws BackendException {
+		BoundStatement bs = new BoundStatement(SELECT_RDATE);
 		bs.bind(finalDate);
 
 		ResultSet rs = null;
@@ -122,6 +126,10 @@ public class BackendSession {
 			rs = session.execute(bs);
 		} catch (Exception e) {
 			throw new BackendException("Could not perform a query. " + e.getMessage() + ".", e);
+		}
+
+		if (rs.isExhausted()) {
+			throw new BackendException("Empty ResultSet");
 		}
 
 		for (Row row : rs) {
@@ -135,7 +143,7 @@ public class BackendSession {
 			}
 
 			Reservation reservation = new Reservation(rDate, name);
-			rooms.get(roomId).reservations.add(reservation);
+			rooms.get(roomId).reservation = reservation;
 		}
 
 		for (Room room: rooms.values()) {
@@ -148,7 +156,7 @@ public class BackendSession {
 	public void reserveRoom(LocalDate rDate, int size, String name) throws BackendException {
 		
 		int totalSize = 0;
-		Set<Room> roomInfo = selectGreaterTh(rDate);
+		Set<Room> roomInfo = selectRdate(rDate);
 		Set<Room> freeRooms = new HashSet<Room>();
 		HashMap<Integer, Integer> reservedRooms = new HashMap<Integer, Integer>(); 
 		
@@ -168,7 +176,6 @@ public class BackendSession {
 			if (totalSize <= size) {
 				totalSize += room.size;
 				reservedRooms.put(room.roomId, room.size);
-				System.out.println("Room " + room.roomId + " reserved");
 			}
 		}
 
@@ -178,15 +185,20 @@ public class BackendSession {
 			try {
 				session.execute(bs);
 				logger.info("Room " + room.getKey() + " reserved");
+				bs = new BoundStatement(SELECT_EXACT_NAME);
+				bs.bind(rDate, name);
+				ResultSet rs = session.execute(bs);
+				if(rs.isExhausted())
+					throw new BackendException("Failed");
 			} catch (Exception e) {
 				throw new BackendException("Could not perform a reservation. " + e.getMessage() + ".", e);
 			}
 		}
 	}
 
-	public void clearRoom(int roomId) throws BackendException {
-		BoundStatement bs = new BoundStatement(UPDATE_ROOM);
-		bs.bind("1900-00-01", "", roomId);
+	public void clearRoom(int roomId, LocalDate date) throws BackendException {
+		BoundStatement bs = new BoundStatement(CLEAR_ROOM);
+		bs.bind("1900-00-01", "", roomId, date);
 		try {
 			session.execute(bs);
 		} catch (Exception e) {
