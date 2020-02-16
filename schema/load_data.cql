@@ -62,6 +62,3 @@ INSERT INTO Initial_Rooms (roomId, rDate, name, size) VALUES (17, '1900-01-01', 
 INSERT INTO Initial_Rooms (roomId, rDate, name, size) VALUES (18, '1900-01-01', '', 5);
 INSERT INTO Initial_Rooms (roomId, rDate, name, size) VALUES (19, '1900-01-01', '', 5);
 INSERT INTO Initial_Rooms (roomId, rDate, name, size) VALUES (20, '1900-01-01', '', 5);
-
-
-

@@ -38,6 +38,9 @@ public class BackendSession {
 	static int counter = 0;
 	static ReentrantLock counterLock = new ReentrantLock(true);
 
+	static int rollbackCounter = 0;
+	static ReentrantLock rollbackCounterLock = new ReentrantLock(true);
+
 	static void incrementCounter() {
 		counterLock.lock();
 		try {
@@ -45,6 +48,16 @@ public class BackendSession {
 			System.out.println("Counter [" + counter + "]");
 		} finally {
 			counterLock.unlock();
+		}
+	}
+
+	static void incrementrollbackCounter() {
+		rollbackCounterLock.lock();
+		try {
+			rollbackCounter++;
+			System.out.println("Rollback Counter [" + rollbackCounter + "]");
+		} finally {
+			rollbackCounterLock.unlock();
 		}
 	}
 
@@ -88,37 +101,37 @@ public class BackendSession {
 		logger.info("Statements prepared");
 	}
 
-	public Set<Room> selectAll() throws BackendException {
-		BoundStatement bs = new BoundStatement(SELECT_ALL_FROM_ROOMS);
+	// public Set<Room> selectAll() throws BackendException {
+	// 	BoundStatement bs = new BoundStatement(SELECT_ALL_FROM_ROOMS);
 
-		ResultSet rs = null;
-		Set<Room> roomInfo = new HashSet<Room>();
-		HashMap<Integer, Room> rooms = new HashMap<>();
-		try {
-			rs = session.execute(bs);
-		} catch (Exception e) {
-			throw new BackendException("Could not perform a query. " + e.getMessage() + ".", e);
-		}
+	// 	ResultSet rs = null;
+	// 	Set<Room> roomInfo = new HashSet<Room>();
+	// 	HashMap<Integer, Room> rooms = new HashMap<>();
+	// 	try {
+	// 		rs = session.execute(bs);
+	// 	} catch (Exception e) {
+	// 		throw new BackendException("Could not perform a query. " + e.getMessage() + ".", e);
+	// 	}
 
-		for (Row row : rs) {
-			int roomId = row.getInt("roomId");
-			LocalDate rDate = row.getDate("rDate");
-			String name = row.getString("name");
-			int size = row.getInt("size");
+	// 	for (Row row : rs) {
+	// 		int roomId = row.getInt("roomId");
+	// 		LocalDate rDate = row.getDate("rDate");
+	// 		String name = row.getString("name");
+	// 		int size = row.getInt("size");
 
-			if (!rooms.keySet().contains(roomId)) {
-				rooms.put(roomId,  new Room(roomId, size));
-			}
+	// 		if (!rooms.keySet().contains(roomId)) {
+	// 			rooms.put(roomId,  new Room(roomId, size));
+	// 		}
 
-			Reservation reservation = new Reservation(rDate, name);
-			rooms.get(roomId).reservation = reservation;
-		}
+	// 		Reservation reservation = new Reservation(rDate, name);
+	// 		rooms.get(roomId).reservation = reservation;
+	// 	}
 
-		for (Room room: rooms.values()) {
-			roomInfo.add(room);
-		}
-		return roomInfo;
-	}
+	// 	for (Room room: rooms.values()) {
+	// 		roomInfo.add(room);
+	// 	}
+	// 	return roomInfo;
+	// }
 
 	public Set<Room> selectRdate(LocalDate finalDate) throws BackendException {
 		BoundStatement bs = new BoundStatement(SELECT_RDATE);
@@ -238,7 +251,7 @@ public class BackendSession {
 			
             rDay.plusDays(1);
 		
-			for (Room room: reservedRooms) {
+			for (Room room: freeRooms) {
             	reservToRollBack.put(room.roomId, tempDate);
 				BoundStatement bs = new BoundStatement(UPDATE_ROOM);
 				bs.bind(room.roomId, tempDate, name, room.size);
@@ -249,12 +262,21 @@ public class BackendSession {
 					bs.bind(tempDate, room.roomId);
 					ResultSet rs = session.execute(bs);
 					for (Row row : rs) {
-						if ((row.getString("name") == "") || !(row.getString("name").equals(name))) { //TODO
-
-							for (Map.Entry<Integer, LocalDate> r : reservToRollBack.entrySet()) {
-								clearRoom(r.getKey(), r.getValue());
-							}
-							throw new BackendException("Failed");
+						if ((row.getString("name") == "") || !(row.getString("name").equals(name))) {
+							//ROLLBACK
+							 for (Map.Entry<Integer, LocalDate> r : reservToRollBack.entrySet()) {
+								 bs = new BoundStatement(SELECT_EXACT);
+								 bs.bind(r.getKey(), r. getValue());
+								 ResultSet rsRB = session.execute(bs);
+								 for (Row rowDel: rsRB){
+									if (rowDel.getString("name").equals(name)){
+										clearRoom(r.getKey(), r.getValue());
+										// System.out.println("CLEARING ROOM: " + Integer.parseInt(rowDel.getString("roomid")) + tempDelDate.toString());
+									}
+								}
+							 }
+							incrementrollbackCounter();
+							throw new BackendException("Failed: Reservation rollback");
 						}
 					}
 				} catch (Exception e) {
