@@ -1,10 +1,14 @@
 package cassdemo.backend;
 
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.HashMap;
 
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
@@ -65,6 +69,7 @@ public class BackendSession {
 	private static PreparedStatement SELECT_RDATE;
 	private static PreparedStatement UPDATE_ROOM;
 	private static PreparedStatement SELECT_EXACT;
+	private static PreparedStatement SELECT_INIT;
 	private static PreparedStatement CLEAR_ROOM;
 
 	private void prepareStatements() throws BackendException {
@@ -72,7 +77,8 @@ public class BackendSession {
 			SELECT_ALL_FROM_ROOMS = session.prepare("SELECT * FROM Rooms;");
 			SELECT_RDATE = session.prepare("SELECT * FROM Rooms where rDate = ?");
 			SELECT_EXACT = session.prepare("SELECT * FROM Rooms WHERE rDate = ? and roomid = ?");
-			CLEAR_ROOM = session.prepare("DELETE FROM Rooms where rdate = ? and roomid = ?");
+			SELECT_INIT = session.prepare("SELECT * FROM Initial_Rooms");
+			CLEAR_ROOM = session.prepare("DELETE FROM Rooms where rDate = ? and roomid = ?");
 			UPDATE_ROOM = session
 					.prepare("INSERT INTO Rooms (roomId, rDate, name, size) VALUES (?, ?, ?, ?)");
 		} catch (Exception e) {
@@ -152,53 +158,114 @@ public class BackendSession {
 		return roomInfo;
 	}
 
+	public List<Room> selectInit() throws BackendException {
+		BoundStatement bs = new BoundStatement(SELECT_INIT);
+		bs.bind();
 
-	public void reserveRoom(LocalDate rDate, int size, String name) throws BackendException {
-		
-		int totalSize = 0;
-		Set<Room> roomInfo = selectRdate(rDate);
-		Set<Room> freeRooms = new HashSet<Room>();
-		HashMap<Integer, Integer> reservedRooms = new HashMap<Integer, Integer>(); 
-		
-		//TO-DO: figure out how to reserve a room that is currently occupied
-		for (Room room: roomInfo) {
-			if (room.isRoomFreeAtDate(rDate)) {
-				freeRooms.add(room);
+		ResultSet rs = null;
+		List<Room> roomInfo = new ArrayList<Room>();
+		HashMap<Integer, Room> rooms = new HashMap<Integer, Room>();
+
+		try {
+			rs = session.execute(bs);
+		} catch (Exception e) {
+			throw new BackendException("Could not perform a query. " + e.getMessage() + ".", e);
+		}
+
+		if (rs.isExhausted()) {
+			throw new BackendException("Empty ResultSet");
+		}
+
+		for (Row row : rs) {
+			int roomId = row.getInt("roomId");
+			int size = row.getInt("size");
+
+			if (!rooms.keySet().contains(roomId)) {
+				rooms.put(roomId, new Room(roomId, size));
 			}
 		}
+
+		for (Room room: rooms.values()) {
+			roomInfo.add(room);
+		}
+		return roomInfo;
+	}
+
+
+	public void reserveRoom(LocalDate sDate, LocalDate eDate, int size, String name) throws BackendException {
+		
+		java.time.LocalDate tempSDate = java.time.LocalDate.of(sDate.getYear(), sDate.getMonth(), sDate.getDay());
+        java.time.LocalDate tempEDate = java.time.LocalDate.of(eDate.getYear(), eDate.getMonth(), eDate.getDay());
+        java.time.LocalDate rDay = tempSDate;
+		int totalSize = 0;
+		List<Room> roomInfo = selectInit();
+
+		Set<Room> freeRooms = new HashSet<Room>();
+		Set<Room> reservedRooms = new HashSet<Room>(); 
+		HashMap<Integer, LocalDate> reservToRollBack = new HashMap<Integer, LocalDate>();
+
+        LocalDate tempDate = LocalDate.fromYearMonthDay(rDay.getYear(), rDay.getMonthValue(), rDay.getDayOfMonth());
+
+		Collections.shuffle(roomInfo);
+
+		for (Room room: roomInfo) {
+			if (totalSize <= size) {
+				totalSize += room.size;
+				reservedRooms.add(room);
+			}
+		}
+
+		for (Room r: reservedRooms) {
+			BoundStatement bs = new BoundStatement(SELECT_EXACT);
+			bs.bind(tempDate, r.roomId);
+			try {
+				ResultSet rs = session.execute(bs);
+				if (rs.isExhausted()) 
+					freeRooms.add(r);
+			} catch(Exception e) {
+				throw new BackendException("Could not perform a reservation. " + e.getMessage() + ".", e);
+			}		
+		}
+
+				
 
 		if (freeRooms.size() == 0) {
 			incrementCounter();
 			throw new BackendException("No free rooms");
 		}
-
-		for (Room room: freeRooms) {
-			if (totalSize <= size) {
-				totalSize += room.size;
-				reservedRooms.put(room.roomId, room.size);
-			}
-		}
-
-		for (Map.Entry<Integer, Integer> room: reservedRooms.entrySet()) {
-			BoundStatement bs = new BoundStatement(UPDATE_ROOM);
-			bs.bind(room.getKey(), rDate, name, room.getValue());
-			try {
-				session.execute(bs);
-				logger.info("Room " + room.getKey() + " reserved");
-				bs = new BoundStatement(SELECT_EXACT);
-				bs.bind(rDate, name);
-				ResultSet rs = session.execute(bs);
-				if(rs.isExhausted())
-					throw new BackendException("Failed");
-			} catch (Exception e) {
-				throw new BackendException("Could not perform a reservation. " + e.getMessage() + ".", e);
+		for (long daysBetween = ChronoUnit.DAYS.between(tempSDate, tempEDate); daysBetween >= 0; daysBetween--) {
+			tempDate = LocalDate.fromYearMonthDay(rDay.getYear(), rDay.getMonthValue(), rDay.getDayOfMonth());
+			
+            rDay.plusDays(1);
+		
+			for (Room room: reservedRooms) {
+            	reservToRollBack.put(room.roomId, tempDate);
+				BoundStatement bs = new BoundStatement(UPDATE_ROOM);
+				bs.bind(room.roomId, tempDate, name, room.size);
+				try {
+					session.execute(bs);
+					logger.info("Room " + room.roomId + " reserved");
+					bs = new BoundStatement(SELECT_EXACT);
+					bs.bind(tempDate, room.roomId);
+					ResultSet rs = session.execute(bs);
+					for (Row row : rs) {
+						if ((row.getString("name") == "") || (row.getString("name") != name)) { //TODO
+							for (Map.Entry<Integer, LocalDate> r : reservToRollBack.entrySet()) {
+								clearRoom(r.getKey(), r.getValue());
+							}
+							throw new BackendException("Failed");
+						}
+					}
+				} catch (Exception e) {
+					throw new BackendException("Could not perform a reservation. " + e.getMessage() + ".", e);
+				}
 			}
 		}
 	}
 
 	public void clearRoom(int roomId, LocalDate date) throws BackendException {
 		BoundStatement bs = new BoundStatement(CLEAR_ROOM);
-		bs.bind("1900-00-01", "", roomId, date);
+		bs.bind(date, roomId);
 		try {
 			session.execute(bs);
 		} catch (Exception e) {

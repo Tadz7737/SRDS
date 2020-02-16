@@ -6,6 +6,8 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.Properties;
 import java.util.Random;
+import java.util.Set;
+import java.util.HashSet;
 
 import com.datastax.driver.core.LocalDate;
 import com.github.javafaker.Faker;
@@ -55,10 +57,11 @@ public class Runner extends Thread {
         //System.out.println("Attemt to reserve: " + randomStartDate.toString() + ", " + randomEndDate.toString() + ", " + randomSize + ", " +randomName);
     }
 
+
     
     private void reserve() throws IOException, BackendException {
         String contactPoint = null;
-		String keyspace = null;
+        String keyspace = null;
 
         Properties properties = new Properties();
 
@@ -70,21 +73,15 @@ public class Runner extends Thread {
 			ex.printStackTrace();
 		}
         
-        java.time.LocalDate sDate = java.time.LocalDate.of(randomStartDate.getYear(), randomStartDate.getMonth(), randomStartDate.getDay());
-        java.time.LocalDate eDate = java.time.LocalDate.of(randomEndDate.getYear(), randomEndDate.getMonth(), randomEndDate.getDay());
-        java.time.LocalDate rDay = sDate;
+        
+        BackendSession session = new BackendSession(contactPoint, keyspace);
 
 		try {
-            for(long daysBetween = ChronoUnit.DAYS.between(sDate, eDate); daysBetween >= 0; daysBetween--)
-            {
-                BackendSession session = new BackendSession(contactPoint, keyspace);
-                LocalDate tempDate = LocalDate.fromYearMonthDay(rDay.getYear(), rDay.getMonthValue(), rDay.getDayOfMonth());
-                session.reserveRoom(tempDate, randomSize, randomName);
-                rDay.plusDays(1);
-            }
+            session.reserveRoom(randomStartDate, randomEndDate, randomSize, randomName);
         } catch(BackendException e) {
             e.printStackTrace();
         }
+
     }
 
     public void run()  {
