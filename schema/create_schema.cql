@@ -8,5 +8,5 @@ CREATE TABLE Rooms (
   rDate date,
   name varchar,
   size int,
-  PRIMARY KEY (roomId, rDate)
+  PRIMARY KEY (rDate, roomId)
 );
