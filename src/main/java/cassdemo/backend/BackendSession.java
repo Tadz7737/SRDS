@@ -70,7 +70,7 @@ public class BackendSession {
 			SELECT_ALL_FROM_ROOMS = session.prepare("SELECT * FROM Rooms;");
 			SELECT_GREATER_THAN_RDATE = session.prepare("SELECT * FROM Rooms where rDate = ?");
 			UPDATE_ROOM = session
-					.prepare("INSERT INTO Rooms (roomId, rDate, name, size) VALUES (?, ?, ?, ?, ?)");
+					.prepare("INSERT INTO Rooms (roomId, rDate, name, size) VALUES (?, ?, ?, ?)");
 		} catch (Exception e) {
 			throw new BackendException("Could not prepare statements. " + e.getMessage() + ".", e);
 		}
