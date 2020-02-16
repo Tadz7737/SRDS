@@ -64,15 +64,15 @@ public class BackendSession {
 	private static PreparedStatement SELECT_ALL_FROM_ROOMS;
 	private static PreparedStatement SELECT_RDATE;
 	private static PreparedStatement UPDATE_ROOM;
-	private static PreparedStatement SELECT_EXACT_NAME;
+	private static PreparedStatement SELECT_EXACT;
 	private static PreparedStatement CLEAR_ROOM;
 
 	private void prepareStatements() throws BackendException {
 		try {
 			SELECT_ALL_FROM_ROOMS = session.prepare("SELECT * FROM Rooms;");
 			SELECT_RDATE = session.prepare("SELECT * FROM Rooms where rDate = ?");
-			SELECT_EXACT_NAME = session.prepare("SELECT * FROM Rooms WHERE rDate = ? and name = ?");
-			CLEAR_ROOM = session.prepare("UPDATE Rooms SET rDate = ? name = ? WHERE rDate = ? name = ?");
+			SELECT_EXACT = session.prepare("SELECT * FROM Rooms WHERE rDate = ? and roomid = ?");
+			CLEAR_ROOM = session.prepare("DELETE FROM Rooms where rdate = ? and roomid = ?");
 			UPDATE_ROOM = session
 					.prepare("INSERT INTO Rooms (roomId, rDate, name, size) VALUES (?, ?, ?, ?)");
 		} catch (Exception e) {
@@ -185,7 +185,7 @@ public class BackendSession {
 			try {
 				session.execute(bs);
 				logger.info("Room " + room.getKey() + " reserved");
-				bs = new BoundStatement(SELECT_EXACT_NAME);
+				bs = new BoundStatement(SELECT_EXACT);
 				bs.bind(rDate, name);
 				ResultSet rs = session.execute(bs);
 				if(rs.isExhausted())

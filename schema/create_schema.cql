@@ -10,3 +10,11 @@ CREATE TABLE Rooms (
   size int,
   PRIMARY KEY (rDate, roomId)
 );
+
+CREATE TABLE Initial_Rooms(
+  roomId int,
+  rDate date,
+  name varchar,
+  size int,
+  PRIMARY KEY (rDate, roomId)
+);
