@@ -249,7 +249,8 @@ public class BackendSession {
 					bs.bind(tempDate, room.roomId);
 					ResultSet rs = session.execute(bs);
 					for (Row row : rs) {
-						if ((row.getString("name") == "") || (row.getString("name") != name)) { //TODO
+						if ((row.getString("name") == "") || !(row.getString("name").equals(name))) { //TODO
+
 							for (Map.Entry<Integer, LocalDate> r : reservToRollBack.entrySet()) {
 								clearRoom(r.getKey(), r.getValue());
 							}
