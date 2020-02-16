@@ -72,7 +72,7 @@ public class Runner extends Thread {
 		
 		try {
             BackendSession session = new BackendSession(contactPoint, keyspace);
-            session.reserveRoom(randomStartDate, randomEndDate, randomSize, randomName);
+            session.reserveRoom(randomStartDate, randomSize, randomName);
         } catch(BackendException e) {
             e.printStackTrace();
         }

@@ -62,15 +62,15 @@ public class BackendSession {
 	}
 
 	private static PreparedStatement SELECT_ALL_FROM_ROOMS;
-	private static PreparedStatement SELECT_GREATER_THAN_END_DATE;
+	private static PreparedStatement SELECT_GREATER_THAN_RDATE;
 	private static PreparedStatement UPDATE_ROOM;
 
 	private void prepareStatements() throws BackendException {
 		try {
 			SELECT_ALL_FROM_ROOMS = session.prepare("SELECT * FROM Rooms;");
-			SELECT_GREATER_THAN_END_DATE = session.prepare("SELECT * FROM Rooms where endDate < ? ALLOW FILTERING");
+			SELECT_GREATER_THAN_RDATE = session.prepare("SELECT * FROM Rooms where rDate = ?");
 			UPDATE_ROOM = session
-					.prepare("INSERT INTO Rooms (roomId, startDate, endDate, name, size) VALUES (?, ?, ?, ?, ?)");
+					.prepare("INSERT INTO Rooms (roomId, rDate, name, size) VALUES (?, ?, ?, ?, ?)");
 		} catch (Exception e) {
 			throw new BackendException("Could not prepare statements. " + e.getMessage() + ".", e);
 		}
@@ -92,8 +92,7 @@ public class BackendSession {
 
 		for (Row row : rs) {
 			int roomId = row.getInt("roomId");
-			LocalDate startDate = row.getDate("startDate");
-			LocalDate endDate = row.getDate("endDate");
+			LocalDate rDate = row.getDate("rDate");
 			String name = row.getString("name");
 			int size = row.getInt("size");
 
@@ -101,7 +100,7 @@ public class BackendSession {
 				rooms.put(roomId,  new Room(roomId, size));
 			}
 
-			Reservation reservation = new Reservation(startDate, endDate, name);
+			Reservation reservation = new Reservation(rDate, name);
 			rooms.get(roomId).reservations.add(reservation);
 		}
 
@@ -111,8 +110,8 @@ public class BackendSession {
 		return roomInfo;
 	}
 
-	public Set<Room> selectGreaterThanEndDate(LocalDate finalDate) throws BackendException {
-		BoundStatement bs = new BoundStatement(SELECT_GREATER_THAN_END_DATE);
+	public Set<Room> selectGreaterTh(LocalDate finalDate) throws BackendException {
+		BoundStatement bs = new BoundStatement(SELECT_GREATER_THAN_RDATE);
 		bs.bind(finalDate);
 
 		ResultSet rs = null;
@@ -127,8 +126,7 @@ public class BackendSession {
 
 		for (Row row : rs) {
 			int roomId = row.getInt("roomId");
-			LocalDate startDate = row.getDate("startDate");
-			LocalDate endDate = row.getDate("endDate");
+			LocalDate rDate = row.getDate("rDate");
 			String name = row.getString("name");
 			int size = row.getInt("size");
 
@@ -136,7 +134,7 @@ public class BackendSession {
 				rooms.put(roomId,  new Room(roomId, size));
 			}
 
-			Reservation reservation = new Reservation(startDate, endDate, name);
+			Reservation reservation = new Reservation(rDate, name);
 			rooms.get(roomId).reservations.add(reservation);
 		}
 
@@ -147,16 +145,16 @@ public class BackendSession {
 	}
 
 
-	public void reserveRoom(LocalDate startDate, LocalDate endDate, int size, String name) throws BackendException {
+	public void reserveRoom(LocalDate rDate, int size, String name) throws BackendException {
 		
 		int totalSize = 0;
-		Set<Room> roomInfo = selectGreaterThanEndDate(endDate);
+		Set<Room> roomInfo = selectGreaterTh(rDate);
 		Set<Room> freeRooms = new HashSet<Room>();
 		HashMap<Integer, Integer> reservedRooms = new HashMap<Integer, Integer>(); 
 		
 		//TO-DO: figure out how to reserve a room that is currently occupied
 		for (Room room: roomInfo) {
-			if (room.isRoomFreeAtDate(endDate)) {
+			if (room.isRoomFreeAtDate(rDate)) {
 				freeRooms.add(room);
 			}
 		}
@@ -176,7 +174,7 @@ public class BackendSession {
 
 		for (Map.Entry<Integer, Integer> room: reservedRooms.entrySet()) {
 			BoundStatement bs = new BoundStatement(UPDATE_ROOM);
-			bs.bind(room.getKey(), startDate, endDate, name, room.getValue());
+			bs.bind(room.getKey(), rDate, name, room.getValue());
 			try {
 				session.execute(bs);
 				logger.info("Room " + room.getKey() + " reserved");
@@ -188,7 +186,7 @@ public class BackendSession {
 
 	public void clearRoom(int roomId) throws BackendException {
 		BoundStatement bs = new BoundStatement(UPDATE_ROOM);
-		bs.bind("1900-00-01", "1900-00-01", "", roomId);
+		bs.bind("1900-00-01", "", roomId);
 		try {
 			session.execute(bs);
 		} catch (Exception e) {

@@ -6,8 +6,7 @@ public class Reservation {
     LocalDate startDate;
     LocalDate endDate;
 
-    public Reservation(LocalDate _startDate, LocalDate _endDate, String _name) {
+    public Reservation(LocalDate _startDate,  String _name) {
         startDate = _startDate;
-        endDate = _endDate;
     }
 }
