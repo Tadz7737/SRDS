@@ -16,7 +16,6 @@ public class Main {
 			try {
 				runner.join();
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}

@@ -54,7 +54,6 @@ public class Runner extends Thread {
         Faker faker = new Faker();
         randomName = faker.name().fullName();
 
-        //System.out.println("Attemt to reserve: " + randomStartDate.toString() + ", " + randomEndDate.toString() + ", " + randomSize + ", " +randomName);
     }
 
 
